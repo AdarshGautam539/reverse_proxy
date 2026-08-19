@@ -4,6 +4,7 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 int main() {
@@ -88,6 +89,34 @@ int main() {
     return 1;
   }
   std::cout << "Client connected\n";
+
+  /* ssize_t is used insted of int because recv() needs a type that can
+   * represent positive numbers, -1(for error), and Zero. server_fd accepts new
+   * client, while client_fd talks to the client. Since an array decays to a
+   * pointer when passed through a function, buffer gives the kernel -> pointer
+   * to first byte of buffer. */
+
+  char buffer[4096];
+
+  ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+
+  if (bytes_received == -1) {
+    std::cerr << "recv() failed: " << std::strerror(errno) << '\n';
+    close(client_fd);
+    close(server_fd);
+    return 1;
+  }
+  std::cout << "Received " << bytes_received << " bytes\n";
+
+  ssize_t bytes_sent = send(client_fd, buffer, bytes_received, 0);
+
+  if (bytes_sent == -1) {
+    std::cerr << "send() failed: " << std::strerror(errno) << '\n';
+
+    close(client_fd);
+    close(server_fd);
+    return 1;
+  }
 
   // closing the client connection
 
